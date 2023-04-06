@@ -1,0 +1,38 @@
+pipeline:
+  agent:
+    label: "master"
+  stages:
+    - stage: "Sync the repo"
+      steps:
+        - git:
+            url: "https://github.com/yahyahmed/i191696_k8s_classtask.git"
+            branch: "master"
+    - stage: "Build the microservice"
+      steps:
+        - script:
+            name: "Build Docker image"
+            command: |
+              docker build -t my-microservice:v1.0.0 
+        - script:
+            name: "Push Docker image to registry"
+            command: |
+              docker push my-microservice:v1.0.0
+    - stage: "Deploy to Kubernetes cluster"
+      steps:
+        - script:
+            name: "Deploy to Kubernetes cluster"
+            command: |
+              kubectl apply -f deployment.yml
+    - stage: "Verify the deployment"
+      steps:
+        - script:
+            name: "Get the service IP and port"
+            command: |
+              kubectl get service my-microservice-service --output=jsonpath='{.status.loadBalancer.ingress[0].ip}:{.spec.ports[0].port}'
+            env:
+              LIVE_IP: "192.168.99.100"
+              PORT: "8888"
+        - script:
+            name: "Test the microservice"
+            command: |
+              curl http://192.168.99.100:8888/change/1/4
